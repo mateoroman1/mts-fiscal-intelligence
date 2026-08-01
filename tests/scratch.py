@@ -7,6 +7,7 @@ if __name__ == "__main__":
             "record_date:gte": "2026-05-01",
             "record_date:lte": "2026-06-30",
         },
+        fields=["foo", "bar"],
         page_size=10,
     )
 

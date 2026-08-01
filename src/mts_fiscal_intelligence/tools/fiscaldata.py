@@ -1,21 +1,11 @@
 from __future__ import annotations
 from mts_fiscal_intelligence.models import AppModel, SourceReference, ToolResult, Field
+from mts_fiscal_intelligence.tools.fiscal_datasets import DATASETS, ALLOWED_FILTER_OPERATORS
 from typing import Literal, Any
 import httpx
 from datetime import date
 
 BASE_URL = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
-
-DATASETS: dict[str, dict[str, str]] = {
-    "reciepts_summary": {
-        "endpoint": "/v1/accounting/mts/mts_table_1",
-        "title": "Summary of Receipts, Outlays, and the Deficit/Surplus of the U.S. Government"
-    },
-    "budget_results_summary": {
-        "endpoint": "/v1/accounting/mts/mts_table_2",
-        "title": "Summary of Budget and Off-Budget Results and Financing of the U.S. Government"
-    }
-}
 
 class FiscalDataQuery(AppModel):
     dataset: Literal[
@@ -40,6 +30,18 @@ def get_dataset_config(dataset: str) -> dict[str, str]:
             f"Not found in available datasets: {supported_datasets}"
         ) from e
 
+def validate_query_fields(query: FiscalDataQuery, dataset_config: dict) -> None:
+    requested_fields = set(query.fields)
+    available_fields = set(dataset_config["fields"])
+
+    unknown_fields = requested_fields - available_fields
+
+    if unknown_fields:
+        raise ValueError(
+            f"Unsupported fields: {unknown_fields}"
+            f"Available fields: {available_fields}"
+        )
+
 def serialize_filters(filters) -> str | None:
 
     if not filters:
@@ -52,6 +54,14 @@ def serialize_filters(filters) -> str | None:
             field, operator = field_and_operator.rsplit(":", maxsplit=1)
         except ValueError as e:
             raise ValueError("Filter keys must use 'field:operator'. e.g. 'record_date:gte'") from e
+
+        if operator not in ALLOWED_FILTER_OPERATORS:
+            supported = ", ".join(ALLOWED_FILTER_OPERATORS)
+
+            raise ValueError(
+                f"Unsupported filter operator: {operator}"
+                f"Supported filter operators: {ALLOWED_FILTER_OPERATORS}"
+            )
 
         serialized_filters.append(f"{field}:{operator}:{value}")
 
@@ -90,6 +100,9 @@ def get_total_pages(meta) -> int:
 def query_fiscaldata(query, *, client: httpx.Client | None = None) -> ToolResult:
 
     dataset_config = get_dataset_config(query.dataset)
+
+    # Need to validate the whole query params and return errors as toolresult failure
+    validate_query_fields(query, dataset_config)
     url = f"{BASE_URL}{dataset_config['endpoint']}"
     params = build_query_params(query)
 
