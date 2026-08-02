@@ -1,4 +1,4 @@
-from models import AppModel, Field
+from mts_fiscal_intelligence.models import AppModel, Field
 
 class DocumentSearchQuery(AppModel):
     query: str = Field(min_length=1)
