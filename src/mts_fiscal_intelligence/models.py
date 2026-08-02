@@ -66,4 +66,4 @@ class AgentResult(AppModel):
     answer: str = Field(min_length=1)
     tool_calls: list[ToolTrace] = Field(default_factory=list)
     sources: list[SourceReference] = Field(default_factory=list)
-    report_path: str | None = None
+    report_path: str | None = None 
