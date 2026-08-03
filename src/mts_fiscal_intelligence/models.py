@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 class AppModel(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
-        validate_assignment=True
+        validate_assignment=True,
     )
 
 class ToolResult(AppModel):
